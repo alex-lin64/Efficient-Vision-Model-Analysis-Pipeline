@@ -1,5 +1,7 @@
 *.plan
 
+triton_deploy\models\yolov7\1\model.plan
+triton_deploy\models\detectron2\1\model.plan
 cnns/
 cvat/
 
