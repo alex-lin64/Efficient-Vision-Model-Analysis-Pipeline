@@ -1,9 +1,0 @@
-*.plan
-
-triton_deploy\models\yolov7\1\model.plan
-triton_deploy\models\detectron2\1\model.plan
-cnns/
-cvat/
-
-# random file for wsl2 ubuntu
-/libssl1.1_1.1.1f-1ubuntu2.19_amd64.deb
