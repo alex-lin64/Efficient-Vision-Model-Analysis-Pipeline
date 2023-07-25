@@ -1,3 +1,16 @@
+Triton_Client is a parent class to faciliate the inference of new models added to the Triton Inference Server.  The
+client requires model specific preprocessing, postprocessing, and visualization methods to be implemented within the 
+model client subclass (which inherits the triton_client).
+
+  preprocess()
+
+  postprocess()
+
+  visualization()
+
+
+
+
 # YOLOv7 on Triton Inference Server
 
 Instructions to deploy YOLOv7 as TensorRT engine to [Triton Inference Server](https://github.com/NVIDIA/triton-inference-server).
