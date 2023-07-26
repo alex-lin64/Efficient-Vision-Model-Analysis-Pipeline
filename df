@@ -1,0 +1,25 @@
+[33m6c0f464[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m HEAD@{0}: pull: Fast-forward
+[33m4e1d7a4[m HEAD@{1}: commit: catch up from 7/25
+[33m09edde5[m HEAD@{2}: pull origin main: Fast-forward
+[33meab3f03[m HEAD@{3}: checkout: moving from first_commit to main
+[33m2ac6b0f[m HEAD@{4}: checkout: moving from main to first_commit
+[33meab3f03[m HEAD@{5}: checkout: moving from first_commit to main
+[33m2ac6b0f[m HEAD@{6}: 
+[33ma604017[m HEAD@{7}: commit: add model.plan (s)
+[33me9b6b35[m HEAD@{8}: commit: add model.plan (s)
+[33m3cd5f53[m HEAD@{9}: commit: firs
+[33mb3e57bd[m HEAD@{10}: commit: first commit
+[33mcf0f0d3[m HEAD@{11}: checkout: moving from cf0f0d3ad0bbd76c255b40ccaf12b54b75aed764 to first_commit
+[33mcf0f0d3[m HEAD@{12}: commit: first commit
+[33m57bc83c[m HEAD@{13}: commit (amend): first commit
+[33m0afa8e1[m HEAD@{14}: checkout: moving from main to 0afa8e1
+[33m3e9877a[m HEAD@{15}: reset: moving to HEAD~
+[33m0afa8e1[m HEAD@{16}: reset: moving to HEAD
+[33m0afa8e1[m HEAD@{17}: commit: first commit
+[33m3e9877a[m HEAD@{18}: Branch: renamed refs/heads/main to refs/heads/main
+[33m3e9877a[m HEAD@{20}: commit: add model plan yolov7
+[33m03d7fb2[m HEAD@{21}: commit: add model plan yolov7
+[33mbd86b4f[m HEAD@{22}: commit: add model plan yolov7
+[33mb639f13[m HEAD@{23}: commit: sdf
+[33m15873ff[m HEAD@{24}: Branch: renamed refs/heads/master to refs/heads/main
+[33m15873ff[m HEAD@{26}: commit (initial): first-commit
