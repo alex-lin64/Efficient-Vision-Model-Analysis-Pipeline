@@ -21,9 +21,9 @@ class Base_Inference_Client():
 
     Contains three functions to be implemented
 
-        preprocess(self, input_image, input_shape) \
-        postprocess(self, results, width, height, input_shape) \
-        visualize(self, detected_objects, input_image) \
+        preprocess() \
+        postprocess() \
+        visualize() \
     """
 
     def __init__(
