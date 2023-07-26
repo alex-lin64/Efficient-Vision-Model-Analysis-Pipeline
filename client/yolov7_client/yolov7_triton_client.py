@@ -125,7 +125,7 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
             old_w = int(inf_shape[1] * img_h / inf_shape[0])
             offset_w = (old_w - img_w) // 2
 
-        # boxes = boxes * np.array([old_w, old_h, old_w, old_h], dtype=np.float32)
+        boxes = boxes * np.array([old_w, old_h, old_w, old_h], dtype=np.float32)
         boxes -= np.array([offset_w, offset_h, offset_w, offset_h], dtype=np.float32)
         boxes = boxes.astype(np.int32)
 
@@ -135,7 +135,12 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
         detections = []
         for i in range(num_dets[0][0]):
             det = {}
-            det["bbox"] = boxes[i]
+            det["bbox"] = [
+                boxes[i][0] / img_w, 
+                boxes[i][1] / img_h, 
+                (boxes[i][2] - boxes[i][0]) / img_w, 
+                (boxes[i][3] - boxes[i][1]) / img_h
+                ]
             det["label"] = COCOLabels(classes[i]).name
             det["confidence"] = scores[i]
             detections.append(det)
