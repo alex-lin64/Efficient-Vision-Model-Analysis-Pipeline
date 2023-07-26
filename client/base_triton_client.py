@@ -168,20 +168,6 @@ class Base_Inference_Client():
         Processes an image through the inference server, performs inference on it
         and displays (or saves) the processed results
 
-        Annotations format is 
-        {
-            "path/to/image": {
-                "detections": [
-                    {
-                        "bbox": [<top-left-x>, <top-left-y>, <width>, <height>],
-                        "label": obj_class
-                        "confidence": 0.00-1.00
-                    }
-                ],
-                "tags": [training/validation/testing]
-            }
-        }
-
         :param:
             - input_: Input directory to load from in image
                 NOTE: directory must only contain image files
@@ -256,9 +242,9 @@ class Base_Inference_Client():
 
         # upload data to fo
         if fo_dataset:
-            self.__export_to_fo(annotations, dataset=fo_dataset)
+            self.__export_image_to_fo(annotations, dataset=fo_dataset)
 
-    def infer_video(self, input_, output_='', fps=24.0):
+    def infer_video(self, input_, vis=False, fo_dataset='', output_='', fps=24.0):
         """
         Processes a video through the inference server, performs inference on it
         and displays (or saves) the processed results
@@ -266,6 +252,9 @@ class Base_Inference_Client():
         :param:
             - input_: Input directory to load from in video
                 NOTE: directory must only contain video files
+            - vis: Show visualization of prediction on computer, default fault
+            - fo_dataset: Dataset name to export predictions to fiftyone, 
+                default '', no export
             - output_: Output directory, default no output saved
             - fps: Video output fps, default 24.0 FPS
         """
@@ -283,6 +272,7 @@ class Base_Inference_Client():
             self.__get_model_stats()
         print("Done.")
 
+        annotations = {}
         for i, filename in enumerate(filenames):
             # existence check
             print("Opening input video stream...")
@@ -328,14 +318,15 @@ class Base_Inference_Client():
                 detected_objects = self._postprocess(results, frame, [self.inf_width, self.inf_height])
                 print(f"Frame {n_frame}: {len(detected_objects)} objects")
                 n_frame += 1
-
-                # visualize the post processed data
-                final_image = self._visualize(results, detected_objects, frame, [self.inf_width, self.inf_height])
-            
+                
                 # writes the image out/ displays it
                 if output_:
+                    # visualize the post processed data
+                    final_image = self._visualize(results, frame, [self.inf_width, self.inf_height])
                     out.write(final_image)
-                else:
+                if vis:
+                    # visualize the post processed data
+                    final_image = self._visualize(results, frame, [self.inf_width, self.inf_height])
                     cv2.imshow('video', final_image)
                     if cv2.waitKey(1) == ord('q'):
                         break
@@ -415,10 +406,24 @@ class Base_Inference_Client():
 
         return filenames
 
-    def __export_to_fo(self, annotations, dataset):
+    def __export_image_to_fo(self, annotations, dataset):
         """
-        Transforms detection data into format for fiftyone as uploads to existing
-        dataset or as a new dataset
+        Transforms image detection data into format for fiftyone as uploads to 
+        existing dataset or as a new dataset
+
+        Annotations format is 
+        {
+            "path/to/image": {
+                "detections": [
+                    {
+                        "bbox": [<top-left-x>, <top-left-y>, <width>, <height>],
+                        "label": obj_class
+                        "confidence": 0.00-1.00
+                    }
+                ],
+                "tags": [training/validation/testing]
+            }
+        }
 
         :params:
             - annotations: dict of images and their filepaths to model predictions
@@ -460,6 +465,30 @@ class Base_Inference_Client():
         dataset.persistent = True
         # populate dataset with the processed samples
         dataset.add_samples(samples)
+
+    def __export_video_to_fo(self, annotations, dataset):
+        """
+        Transforms video detection data into format for fiftyone as uploads to 
+        existing dataset or as a new dataset
+
+        Annotations format is 
+        {
+            "path/to/image": {
+                "detections": [
+                    {
+                        "bbox": [<top-left-x>, <top-left-y>, <width>, <height>],
+                        "label": obj_class
+                        "confidence": 0.00-1.00
+                    }
+                ],
+                "tags": [training/validation/testing]
+            }
+        }
+
+        :params:
+            - annotations:
+            - dataset: 
+        """
 
     @abstractmethod
     def _preprocess(self, input_image, inf_shape):
