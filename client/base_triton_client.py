@@ -283,7 +283,7 @@ class Base_Inference_Client():
 
             annotations[filename.path] = {}
 
-            n_frame = 0
+            n_frame = 1
             out = None   # file location to write output to
             print("Invoking inference...")
             # start loop to inference on video
@@ -509,6 +509,9 @@ class Base_Inference_Client():
 
             # create video sample with frame labels
             for n_frame, annotation in annotations[filepath].items():
+
+                print(n_frame, annotation)
+
                 detections = []
                 frame = fo.Frame()
 
@@ -526,8 +529,8 @@ class Base_Inference_Client():
                 # add frame to sample
                 sample.frames[n_frame] = frame
             # add tag to the video
-            sample.tags = annotation[n_frame]["tags"]
-            samples.append[sample]
+            sample.tags = annotation["tags"]
+            samples.append(sample)
         
         # check if dataset is in list
         if dataset in fo.list_datasets():
@@ -540,6 +543,7 @@ class Base_Inference_Client():
         
         # set dataset to persistent, stay in fo
         dataset.persistent = True
+        print(samples)
         # populate dataset with the processed samples
         dataset.add_samples(samples)
 
