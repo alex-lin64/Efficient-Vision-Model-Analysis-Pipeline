@@ -46,6 +46,16 @@ coverage.xml
 *.log
 *.pot
 
+# videos
+*.mp4
+*.mp3
+
+# pictures
+*.jpg
+*.jpeg
+*.png
+*.gif
+
 # Sphinx documentation
 docs/_build/
 
