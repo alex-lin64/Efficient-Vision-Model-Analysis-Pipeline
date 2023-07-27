@@ -108,8 +108,6 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
         det_classes = results.as_numpy(self.output_names[3])
         img_h, img_w = input_image.shape[0], input_image.shape[1]
 
-        print(det_boxes)
-
         # collect raw inference data from output tensors
         boxes = det_boxes[0, :num_dets[0][0]] / np.array([inf_shape[0], inf_shape[1], inf_shape[0], inf_shape[1]], dtype=np.float32)
         scores = det_scores[0, :num_dets[0][0]]
@@ -128,8 +126,6 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
         boxes = boxes * np.array([old_w, old_h, old_w, old_h], dtype=np.float32)
         boxes -= np.array([offset_w, offset_h, offset_w, offset_h], dtype=np.float32)
         boxes = boxes.astype(np.int32)
-
-        print(boxes)
 
         annotation = {}
         detections = []

@@ -197,7 +197,7 @@ class Base_Inference_Client():
             input_image = cv2.imread(str(filename.path))
             if input_image is None:
                 print(f"FAILED: could not load input image {str(filename.path)}")
-                sys.exit(1)
+                continue
 
             # preprocess input image
             input_image_buffer = self._preprocess(input_image, [self.inf_width, self.inf_height])
@@ -279,7 +279,9 @@ class Base_Inference_Client():
             cap = cv2.VideoCapture(filename.path)
             if not cap.isOpened():
                 print(f"FAILED: cannot open video {filename.path}")
-                sys.exit(1)
+                continue
+
+            annotations[filename.path] = {}
 
             n_frame = 0
             out = None   # file location to write output to
@@ -315,8 +317,11 @@ class Base_Inference_Client():
                     )
 
                 # run postprocessing
-                detected_objects = self._postprocess(results, frame, [self.inf_width, self.inf_height])
-                print(f"Frame {n_frame}: {len(detected_objects)} objects")
+                annotation = self._postprocess(results, frame, [self.inf_width, self.inf_height])
+                print(f"Frame {n_frame}: {len(annotation)} objects")
+                # add annotation of frame under the video 
+                annotations[filename.path][n_frame] = annotation 
+                # increment frame
                 n_frame += 1
                 
                 # writes the image out/ displays it
@@ -337,6 +342,9 @@ class Base_Inference_Client():
                 out.release()
             else:
                 cv2.destroyAllWindows()
+        
+        if fo_dataset:
+            self.__export_video_to_fo(annotations, fo_dataset)
 
     def infer_dummy(self):
         """       
@@ -437,11 +445,11 @@ class Base_Inference_Client():
 
             detections = []
             # convert all detections to fo format
-            for obj in annotations[filepath]['detections']:
-                label = obj['label']
+            for det in annotations[filepath]['detections']:
+                label = det['label']
                 # bbox coordingates in format [top-left-x, top-left-y, width, height]
-                bbox = obj['bbox']
-                confidence = obj['confidence']
+                bbox = det['bbox']
+                confidence = det['confidence']
 
                 detections.append(
                     fo.Detection(label=label, bounding_box=bbox, confidence=confidence)
@@ -473,22 +481,68 @@ class Base_Inference_Client():
 
         Annotations format is 
         {
-            "path/to/image": {
-                "detections": [
-                    {
-                        "bbox": [<top-left-x>, <top-left-y>, <width>, <height>],
-                        "label": obj_class
-                        "confidence": 0.00-1.00
-                    }
-                ],
-                "tags": [training/validation/testing]
+            "path/to/video": {
+                1: {
+                    "detections": [
+                        {
+                            "bbox": [<top-left-x>, <top-left-y>, <width>, <height>],
+                            "label": obj_class
+                            "confidence": 0.00-1.00
+                        }
+                    ],
+                    tags": [training/validation/testing]
+                }
+                2: { ... }
             }
         }
 
         :params:
-            - annotations:
-            - dataset: 
+            - annotations: dict of videos and their filepaths to model predictions 
+                ordered by frame
+            - dataset: name of dataset to export annotations to in fiftyone, if 
+                dataset name already exists in fiftyone, will append to dataset
         """
+        samples = []
+
+        for filepath in annotations:
+            sample = fo.Sample(filepath=filepath)
+
+            # create video sample with frame labels
+            for n_frame, annotation in annotations[filepath].items():
+                detections = []
+                frame = fo.Frame()
+
+                for det in annotation["detections"]:
+                    label = det["label"]
+                    # bbox coordingates in format [top-left-x, top-left-y, width, height]
+                    bbox = det['bbox']
+                    confidence = det['confidence']
+
+                    detections.append(
+                        fo.Detection(label=label, bounding_box=bbox, confidence=confidence)
+                    )
+                # append detections in frame to the frame
+                frame["objects"] = fo.Detections(detections=detections)
+                # add frame to sample
+                sample.frames[n_frame] = frame
+            # add tag to the video
+            sample.tags = annotation[n_frame]["tags"]
+            samples.append[sample]
+        
+        # check if dataset is in list
+        if dataset in fo.list_datasets():
+            dataset = fo.load_dataset(dataset)
+        else:
+            print("Dataset does not exist in fiftyone, creating new \
+                  dataset by default.  Make sure the dataset set to persistent \
+                  if using existing fiftyone datset")
+            dataset = fo.Dataset(dataset)
+        
+        # set dataset to persistent, stay in fo
+        dataset.persistent = True
+        # populate dataset with the processed samples
+        dataset.add_samples(samples)
+
 
     @abstractmethod
     def _preprocess(self, input_image, inf_shape):
