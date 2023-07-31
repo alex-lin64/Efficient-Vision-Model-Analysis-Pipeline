@@ -163,7 +163,7 @@ class Base_Inference_Client():
         for output_name in output_names:
             self.server_outputs.append(grpcclient.InferRequestedOutput(output_name))
 
-    def infer_image(self, input_, vis=False, output_='', fo_dataset=''):
+    def infer_image(self, input_, vis=False, output_='', fo_dataset='', tags=[]):
         """
         Processes an image through the inference server, performs inference on it
         and displays (or saves) the processed results
@@ -173,8 +173,9 @@ class Base_Inference_Client():
                 NOTE: directory must only contain image files
             - fo_dataset: Dataset name to export predictions to fiftyone, 
                 default '', no export
-            - vis: Show visualization of prediction on computer, default fault
+            - vis: Show visualization of prediction on computer, default false
             - output_: Output directory, default no output saved
+            - tags: list of tags to organize inference results in fiftyone
         """
         # input check
         print("Running in 'image' mode")
@@ -220,7 +221,7 @@ class Base_Inference_Client():
                 print(f"Naive buffer sum: {np.sum(res)}")
             
             # post process raw data from server
-            annotation = self._postprocess(results, input_image, [self.inf_width, self.inf_height])
+            annotation = self._postprocess(results, input_image, [self.inf_width, self.inf_height], tags)
             print(f"Detected objects: {len(annotation)}")
 
             # saves detections in annotations format described in method description
@@ -244,7 +245,7 @@ class Base_Inference_Client():
         if fo_dataset:
             self.__export_image_to_fo(annotations, dataset=fo_dataset)
 
-    def infer_video(self, input_, vis=False, fo_dataset='', output_='', fps=24.0):
+    def infer_video(self, input_, vis=False, fo_dataset='', output_='', fps=24.0, tags=[]):
         """
         Processes a video through the inference server, performs inference on it
         and displays (or saves) the processed results
@@ -252,11 +253,12 @@ class Base_Inference_Client():
         :param:
             - input_: Input directory to load from in video
                 NOTE: directory must only contain video files
-            - vis: Show visualization of prediction on computer, default fault
+            - vis: Show visualization of prediction on computer, default false
             - fo_dataset: Dataset name to export predictions to fiftyone, 
                 default '', no export
             - output_: Output directory, default no output saved
             - fps: Video output fps, default 24.0 FPS
+            - tags: list of tags to organize inference results in fiftyone
         """
         # input check
         print("Running in 'video' mode")
@@ -317,7 +319,7 @@ class Base_Inference_Client():
                     )
 
                 # run postprocessing
-                annotation = self._postprocess(results, frame, [self.inf_width, self.inf_height])
+                annotation = self._postprocess(results, frame, [self.inf_width, self.inf_height], tags)
                 print(f"Frame {n_frame}: {len(annotation)} objects")
                 # add annotation of frame under the video 
                 annotations[filename.path][n_frame] = annotation 
@@ -509,9 +511,6 @@ class Base_Inference_Client():
 
             # create video sample with frame labels
             for n_frame, annotation in annotations[filepath].items():
-
-                print(n_frame, annotation)
-
                 detections = []
                 frame = fo.Frame()
 
@@ -543,7 +542,6 @@ class Base_Inference_Client():
         
         # set dataset to persistent, stay in fo
         dataset.persistent = True
-        print(samples)
         # populate dataset with the processed samples
         dataset.add_samples(samples)
 
@@ -564,7 +562,7 @@ class Base_Inference_Client():
         """
 
     @abstractmethod
-    def _postprocess(self, results, input_image, inf_shape, scale=None):
+    def _postprocess(self, results, input_image, inf_shape, tags, scale=None):
         """
         Postprocessing function, implemented in child class, performs necessary 
         modifications to output data to be uploaded to fiftyone
@@ -574,6 +572,7 @@ class Base_Inference_Client():
             - input_image: original image used for inference
             - inf_shape: [inf_weight, inf_height], image dimensions specified for 
                 inference
+            - tags: list of tags to organize inference results in fiftyone
             - scales: image resize scale, default: no scale postprocessing applied
 
         :returns:
