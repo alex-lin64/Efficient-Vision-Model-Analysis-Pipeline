@@ -77,7 +77,7 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
         """
         return preprocess(input_image, inf_shape)
 
-    def _postprocess(self, results, input_image, inf_shape):
+    def _postprocess(self, results, input_image, inf_shape, tags):
         """
         Postprocessing function, implemented in child class, performs necessary 
         modifications to output data to get ready for visualization 
@@ -87,6 +87,7 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
             - input_image: original image used for inference
             - inf_shape: [inf_weight, inf_height], image dimensions specified for 
                 inference
+            - tags: list of tags to organize inference results in fiftyone
             - scales: image resize scale, default: no scale postprocessing applied
                 
         :returns:
@@ -142,7 +143,7 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
             detections.append(det)
 
         annotation["detections"] = detections
-        annotation["tags"] = ["validation"]
+        annotation["tags"] = tags
 
         return annotation
 
@@ -156,7 +157,6 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
             - input_image: original image input 
             - inf_shape: [inf_weight, inf_height], image dimensions specified for 
                 inference
-
 
         :returns:
             - the input image with the detecitons visualized 

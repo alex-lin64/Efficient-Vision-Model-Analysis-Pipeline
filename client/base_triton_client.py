@@ -79,12 +79,6 @@ class Base_Inference_Client():
         self.inf_width = width
         self.inf_height = height
 
-
-        # # TODO make config file for all available models
-        # self.__available_models = set()
-        # self.__available_models.add("yolov7")
-        # self.__available_models.add("detectron2")
-
         # create server context
         try:
             self.__triton_client = grpcclient.InferenceServerClient(
