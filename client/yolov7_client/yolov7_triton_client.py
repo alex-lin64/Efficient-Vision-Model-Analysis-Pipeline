@@ -84,13 +84,14 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
 
         NOTE: numeric outputs must be in float or float64 format
 
+        NOTE: yolov7 is trained on COCOClasses
+
         :params:
             - results: raw inference data from the inference server 
             - input_image: original image used for inference
             - inf_shape: [inf_weight, inf_height], image dimensions specified for 
                 inference
             - tags: list of tags to organize inference results in fiftyone
-            - scales: image resize scale, default: no scale postprocessing applied
                 
         :returns:
             - processed results in format
