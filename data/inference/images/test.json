@@ -1,0 +1,24 @@
+{
+    "C:\\Users\\Alex Lin\\Desktop\\baseline_system\\data\\raw\\images\\dog.jpg": {
+        "detections": [
+            {
+                "bbox": [1, 2, 3, 4],
+                "label": "test_label1",
+                "confidence": 0.5
+            }
+        ],
+        "tags": ["validation"]
+    },
+    "C:\\Users\\Alex Lin\\Desktop\\baseline_system\\data\raw\\images\\dog.jpg": {
+        "detections": [
+            {
+                "bbox": [1, 2, 3, 4],
+                "label": "test_label2",
+                "confidence": 0.5
+            }
+        ],
+        "tags": ["validation"]
+    }
+}
+
+

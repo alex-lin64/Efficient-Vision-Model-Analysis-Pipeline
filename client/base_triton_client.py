@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
 from abc import abstractmethod
-from os.path import isfile, isdir
 import glob
 import numpy as np
 import sys
 import cv2
 import os
 
-import fiftyone as fo
+from .utils.exports import export_image_to_fo, export_video_to_fo, export_json
 import tritonclient.grpc as grpcclient
 from tritonclient.utils import InferenceServerException
 
@@ -157,7 +156,7 @@ class Base_Inference_Client():
         for output_name in output_names:
             self.server_outputs.append(grpcclient.InferRequestedOutput(output_name))
 
-    def infer_image(self, input_, vis=False, output_='', fo_dataset='', tags=[]):
+    def infer_image(self, input_, vis=False, output_='', fo_dataset='', json_out='', tags=[]):
         """
         Processes an image through the inference server, performs inference on it
         and displays (or saves) the processed results
@@ -165,10 +164,12 @@ class Base_Inference_Client():
         :param:
             - input_: Input directory to load from in image
                 NOTE: directory must only contain image files
-            - fo_dataset: Dataset name to export predictions to fiftyone, 
-                default '', no export
             - vis: Show visualization of prediction on computer, default false
             - output_: Output directory, default no output saved
+            - fo_dataset: Dataset name to export predictions to fiftyone, 
+                default '', no export
+            - json_out: Output directory for annotations outputs, includes filename
+                e.g. /my/output/file/path/myfile.json
             - tags: list of tags to organize inference results in fiftyone
         """
         # input check
@@ -235,11 +236,14 @@ class Base_Inference_Client():
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
 
+        # export annotations as json
+        if json_out:
+            export_json(json_out, annotations)
         # upload data to fo
         if fo_dataset:
-            self.__export_image_to_fo(annotations, dataset=fo_dataset)
+            export_image_to_fo(annotations, dataset=fo_dataset)
 
-    def infer_video(self, input_, vis=False, fo_dataset='', output_='', fps=24.0, tags=[]):
+    def infer_video(self, input_, vis=False, fo_dataset='', json_out='', output_='', fps=24.0, tags=[]):
         """
         Processes a video through the inference server, performs inference on it
         and displays (or saves) the processed results
@@ -250,6 +254,8 @@ class Base_Inference_Client():
             - vis: Show visualization of prediction on computer, default false
             - fo_dataset: Dataset name to export predictions to fiftyone, 
                 default '', no export
+            - json_out: Output directory for annotations outputs, includes filename
+                e.g. /my/output/file/path/myfile.json            
             - output_: Output directory, default no output saved
             - fps: Video output fps, default 24.0 FPS
             - tags: list of tags to organize inference results in fiftyone
@@ -339,8 +345,11 @@ class Base_Inference_Client():
             else:
                 cv2.destroyAllWindows()
         
+        # export annotations as json
+        if json_out:
+            export_json(json_out, annotations)
         if fo_dataset:
-            self.__export_video_to_fo(annotations, fo_dataset)
+            export_video_to_fo(annotations, fo_dataset)
 
     def infer_dummy(self):
         """       
@@ -409,136 +418,6 @@ class Base_Inference_Client():
                 filenames.append(filename)
 
         return filenames
-
-    def __export_image_to_fo(self, annotations, dataset):
-        """
-        Transforms image detection data into format for fiftyone as uploads to 
-        existing dataset or as a new dataset
-
-        Annotations format is 
-        {
-            "path/to/image": {
-                "detections": [
-                    {
-                        "bbox": [<top-left-x>, <top-left-y>, <width>, <height>],
-                        "label": obj_class
-                        "confidence": 0.00-1.00
-                    }
-                ],
-                "tags": [training/validation/testing]
-            }
-        }
-
-        :params:
-            - annotations: dict of images and their filepaths to model predictions
-            - dataset: name of dataset to export annotations to in fiftyone, if 
-                dataset name already exists in fiftyone, will append to dataset
-        """
-        samples = []
-
-        for filepath in annotations:
-            sample = fo.Sample(filepath=filepath)
-
-            detections = []
-            # convert all detections to fo format
-            for det in annotations[filepath]['detections']:
-                label = det['label']
-                # bbox coordingates in format [top-left-x, top-left-y, width, height]
-                bbox = det['bbox']
-                confidence = det['confidence']
-
-                detections.append(
-                    fo.Detection(label=label, bounding_box=bbox, confidence=confidence)
-                )
-
-            # set sample detections to converted samples
-            sample['model_detections'] = fo.Detections(detections=detections)
-            sample.tags = annotations[filepath]["tags"]
-            samples.append(sample)
-                           
-        # check if dataset is in list
-        if dataset in fo.list_datasets():
-            dataset = fo.load_dataset(dataset)
-        else:
-            print("Dataset does not exist in fiftyone, creating new \
-                  dataset by default.  Make sure the dataset set to persistent \
-                  if using existing fiftyone datset")
-            dataset = fo.Dataset(dataset)
-        
-        # set dataset to persistent, stay in fo
-        dataset.persistent = True
-        # populate dataset with the processed samples
-        dataset.add_samples(samples)
-
-    def __export_video_to_fo(self, annotations, dataset):
-        """
-        Transforms video detection data into format for fiftyone as uploads to 
-        existing dataset or as a new dataset
-
-        Annotations format is 
-        {
-            "path/to/video": {
-                1: {
-                    "detections": [
-                        {
-                            "bbox": [<top-left-x>, <top-left-y>, <width>, <height>],
-                            "label": obj_class
-                            "confidence": 0.00-1.00
-                        }
-                    ],
-                    tags": [training/validation/testing]
-                }
-                2: { ... }
-            }
-        }
-
-        :params:
-            - annotations: dict of videos and their filepaths to model predictions 
-                ordered by frame
-            - dataset: name of dataset to export annotations to in fiftyone, if 
-                dataset name already exists in fiftyone, will append to dataset
-        """
-        samples = []
-
-        for filepath in annotations:
-            sample = fo.Sample(filepath=filepath)
-
-            # create video sample with frame labels
-            for n_frame, annotation in annotations[filepath].items():
-                detections = []
-                frame = fo.Frame()
-
-                for det in annotation["detections"]:
-                    label = det["label"]
-                    # bbox coordingates in format [top-left-x, top-left-y, width, height]
-                    bbox = det['bbox']
-                    confidence = det['confidence']
-
-                    detections.append(
-                        fo.Detection(label=label, bounding_box=bbox, confidence=confidence)
-                    )
-                # append detections in frame to the frame
-                frame["objects"] = fo.Detections(detections=detections)
-                # add frame to sample
-                sample.frames[n_frame] = frame
-            # add tag to the video
-            sample.tags = annotation["tags"]
-            samples.append(sample)
-        
-        # check if dataset is in list
-        if dataset in fo.list_datasets():
-            dataset = fo.load_dataset(dataset)
-        else:
-            print("Dataset does not exist in fiftyone, creating new \
-                  dataset by default.  Make sure the dataset set to persistent \
-                  if using existing fiftyone datset")
-            dataset = fo.Dataset(dataset)
-        
-        # set dataset to persistent, stay in fo
-        dataset.persistent = True
-        # populate dataset with the processed samples
-        dataset.add_samples(samples)
-
 
     @abstractmethod
     def _preprocess(self, input_image, inf_shape):

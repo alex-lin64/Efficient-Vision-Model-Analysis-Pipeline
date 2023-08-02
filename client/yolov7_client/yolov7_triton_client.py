@@ -82,6 +82,8 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
         Postprocessing function, implemented in child class, performs necessary 
         modifications to output data to get ready for visualization 
 
+        NOTE: numeric outputs must be in float or float64 format
+
         :params:
             - results: raw inference data from the inference server 
             - input_image: original image used for inference
@@ -139,7 +141,7 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
                 (boxes[i][3] - boxes[i][1]) / img_h
                 ]
             det["label"] = COCOLabels(classes[i]).name
-            det["confidence"] = scores[i]
+            det["confidence"] = float(scores[i]) 
             detections.append(det)
 
         annotation["detections"] = detections
