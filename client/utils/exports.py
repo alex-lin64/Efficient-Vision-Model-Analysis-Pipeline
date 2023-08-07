@@ -140,8 +140,9 @@ def export_video_to_fo(annotations, dataset, label_field):
 
 def update_image_in_fo(annotations, dataset, label_field):
     """
-    Transforms image detection data into format for fiftyone as uploads to 
-    existing dataset or as a new dataset
+    Updates annotations of images of dataset in fiftyone with model predictions,
+    used to add model predictions on top of ground truth for analysis of model 
+    performance
 
     Annotations format is 
     {
@@ -192,9 +193,10 @@ def update_image_in_fo(annotations, dataset, label_field):
 
 def update_video_in_fo(annotations, dataset, label_field):
     """
-    Transforms video detection data into format for fiftyone as uploads to 
-    existing dataset or as a new dataset
-
+    Updates annotations of videos of dataset in fiftyone with model predictions,
+    used to add model predictions on top of ground truth for analysis of model 
+    performance
+    
     Annotations format is 
     {
         "path/to/video": {
