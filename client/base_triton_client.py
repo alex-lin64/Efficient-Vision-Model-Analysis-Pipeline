@@ -7,7 +7,7 @@ import sys
 import cv2
 import os
 
-from .utils.exports import export_image_to_fo, export_video_to_fo, \
+from ..utils.exports import export_image_to_fo, export_video_to_fo, \
     update_image_in_fo, update_video_in_fo, export_json
 import tritonclient.grpc as grpcclient
 from tritonclient.utils import InferenceServerException
@@ -23,7 +23,6 @@ class Base_Inference_Client():
 
         preprocess() \
         postprocess() \
-        visualize() \
     """
 
     def __init__(
@@ -509,23 +508,22 @@ class Base_Inference_Client():
             - processed results ready to be uploaded to fiftyone
         """
     
-    @abstractmethod
-    def _visualize(self, results, input_image, inf_shape):
-        """
-        Processes results and composes the processed results onto the input image to create visual 
-        representation of the detections
+    # @abstractmethod
+    # def _visualize(self, results, input_image, inf_shape):
+    #     """
+    #     Processes results and composes the processed results onto the input image to create visual 
+    #     representation of the detections
 
-       **NOTE: this method is for development/testing purposes only and can be
-            simply defined with "pass" to implement a model specific client without 
-            having to implement this method 
+    #    **NOTE: this method is for development/testing purposes only and should not be 
+    #     uncommented when using the baseline
 
-        :params:
-            - results: raw inference data from the inference server 
-            - input_image: original image input 
-            - inf_shape: [inf_weight, inf_height], image dimensions specified for 
-                inference
+    #     :params:
+    #         - results: raw inference data from the inference server 
+    #         - input_image: original image input 
+    #         - inf_shape: [inf_weight, inf_height], image dimensions specified for 
+    #             inference
 
-        :returns:
-            - the input image with the detecitons mapped onto the image 
-        """
+    #     :returns:
+    #         - the input image with the detecitons mapped onto the image 
+    #     """
     
