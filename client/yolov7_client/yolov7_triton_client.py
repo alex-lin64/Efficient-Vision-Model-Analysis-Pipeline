@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import cv2
 
-from ..templates.base_triton_client import Base_Inference_Client
+from ..base_triton_client import Base_Inference_Client
 from .processing import preprocess, postprocess
 from .render import render_box, render_filled_box, get_text_size, render_text, RAND_COLORS
 from .labels import COCOLabels

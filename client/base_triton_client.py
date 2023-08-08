@@ -7,7 +7,7 @@ import sys
 import cv2
 import os
 
-from ..utils.exports import export_image_to_fo, export_video_to_fo, \
+from .utils.exports import export_image_to_fo, export_video_to_fo, \
     update_image_in_fo, update_video_in_fo, export_json
 import tritonclient.grpc as grpcclient
 from tritonclient.utils import InferenceServerException

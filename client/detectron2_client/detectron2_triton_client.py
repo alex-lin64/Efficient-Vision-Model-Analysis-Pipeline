@@ -6,7 +6,7 @@ import PIL.Image as Image
 import PIL.ImageDraw as ImageDraw
 import PIL.ImageFont as ImageFont
 
-from ..templates.base_triton_client import Base_Inference_Client
+from ..base_triton_client import Base_Inference_Client
 
 # colors for visualization
 COLORS = ['GoldenRod', 'MediumTurquoise', 'GreenYellow', 'SteelBlue', 'DarkSeaGreen', 'SeaShell', 'LightGrey',
