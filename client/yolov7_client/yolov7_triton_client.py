@@ -82,13 +82,16 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
         Postprocessing function, implemented in child class, performs necessary 
         modifications to output data to get ready for visualization 
 
+        NOTE: numeric outputs must be in float or float64 format
+
+        NOTE: yolov7 is trained on COCOClasses
+
         :params:
             - results: raw inference data from the inference server 
             - input_image: original image used for inference
             - inf_shape: [inf_weight, inf_height], image dimensions specified for 
                 inference
             - tags: list of tags to organize inference results in fiftyone
-            - scales: image resize scale, default: no scale postprocessing applied
                 
         :returns:
             - processed results in format
@@ -139,7 +142,7 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
                 (boxes[i][3] - boxes[i][1]) / img_h
                 ]
             det["label"] = COCOLabels(classes[i]).name
-            det["confidence"] = scores[i]
+            det["confidence"] = float(scores[i]) 
             detections.append(det)
 
         annotation["detections"] = detections
@@ -147,58 +150,60 @@ class YoloV7_Triton_Inference_Client(Base_Inference_Client):
 
         return annotation
 
-    def _visualize(self, results, input_image, inf_shape):
-        """
-        Composes the processed results onto the input image to create visual 
-        representation of the detections
+    # def _visualize(self, results, input_image, inf_shape):
+    #     """
+    #     Composes the processed results onto the input image to create visual 
+    #     representation of the detections
 
-        :params:
-            - results: raw inference data from the inference server 
-            - input_image: original image input 
-            - inf_shape: [inf_weight, inf_height], image dimensions specified for 
-                inference
+    #     NOTE: for development purposes only
 
-        :returns:
-            - the input image with the detecitons visualized 
+    #     :params:
+    #         - results: raw inference data from the inference server 
+    #         - input_image: original image input 
+    #         - inf_shape: [inf_weight, inf_height], image dimensions specified for 
+    #             inference
 
-        ** NOTE: this yolov7 is trained on COCO labels
-        """
-        num_dets = results.as_numpy(self.output_names[0])
-        det_boxes = results.as_numpy(self.output_names[1])
-        det_scores = results.as_numpy(self.output_names[2])
-        det_classes = results.as_numpy(self.output_names[3])
-        detected_objects = postprocess(
-            num_dets, 
-            det_boxes, 
-            det_scores, 
-            det_classes, 
-            input_image.shape[1], 
-            input_image.shape[0], 
-            inf_shape)
+    #     :returns:
+    #         - the input image with the detecitons visualized 
+
+    #     ** NOTE: this yolov7 is trained on COCO labels
+    #     """
+    #     num_dets = results.as_numpy(self.output_names[0])
+    #     det_boxes = results.as_numpy(self.output_names[1])
+    #     det_scores = results.as_numpy(self.output_names[2])
+    #     det_classes = results.as_numpy(self.output_names[3])
+    #     detected_objects = postprocess(
+    #         num_dets, 
+    #         det_boxes, 
+    #         det_scores, 
+    #         det_classes, 
+    #         input_image.shape[1], 
+    #         input_image.shape[0], 
+    #         inf_shape)
         
-        for box in detected_objects:
-            print(f"{COCOLabels(box.classID).name}: {box.confidence}")
-            input_image = render_box(
-                input_image, 
-                box.box(), 
-                color=tuple(RAND_COLORS[box.classID % 64].tolist())
-                )
-            size = get_text_size(
-                input_image, 
-                f"{COCOLabels(box.classID).name}: {box.confidence:.2f}", 
-                normalised_scaling=0.6
-                )
-            input_image = render_filled_box(
-                input_image, 
-                (box.x1 - 3, box.y1 - 3, box.x1 + size[0], box.y1 + size[1]), 
-                color=(220, 220, 220)
-                )
-            input_image = render_text(
-                input_image, 
-                f"{COCOLabels(box.classID).name}: {box.confidence:.2f}", 
-                (box.x1, box.y1), 
-                color=(30, 30, 30), 
-                normalised_scaling=0.5
-                )
+    #     for box in detected_objects:
+    #         print(f"{COCOLabels(box.classID).name}: {box.confidence}")
+    #         input_image = render_box(
+    #             input_image, 
+    #             box.box(), 
+    #             color=tuple(RAND_COLORS[box.classID % 64].tolist())
+    #             )
+    #         size = get_text_size(
+    #             input_image, 
+    #             f"{COCOLabels(box.classID).name}: {box.confidence:.2f}", 
+    #             normalised_scaling=0.6
+    #             )
+    #         input_image = render_filled_box(
+    #             input_image, 
+    #             (box.x1 - 3, box.y1 - 3, box.x1 + size[0], box.y1 + size[1]), 
+    #             color=(220, 220, 220)
+    #             )
+    #         input_image = render_text(
+    #             input_image, 
+    #             f"{COCOLabels(box.classID).name}: {box.confidence:.2f}", 
+    #             (box.x1, box.y1), 
+    #             color=(30, 30, 30), 
+    #             normalised_scaling=0.5
+    #             )
         
-        return input_image
+    #     return input_image

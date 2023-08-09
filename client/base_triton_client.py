@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 from abc import abstractmethod
-from os.path import isfile, isdir
 import glob
 import numpy as np
 import sys
 import cv2
 import os
 
-import fiftyone as fo
+from .utils.exports import export_image_to_fo, export_video_to_fo, \
+    update_image_in_fo, update_video_in_fo, export_json
 import tritonclient.grpc as grpcclient
 from tritonclient.utils import InferenceServerException
 
@@ -23,7 +23,6 @@ class Base_Inference_Client():
 
         preprocess() \
         postprocess() \
-        visualize() \
     """
 
     def __init__(
@@ -157,28 +156,43 @@ class Base_Inference_Client():
         for output_name in output_names:
             self.server_outputs.append(grpcclient.InferRequestedOutput(output_name))
 
-    def infer_image(self, input_, vis=False, output_='', fo_dataset='', tags=[]):
+    def infer_image(self, input_, vis=False, output_='', fo_dataset=None, create_fo_ds='', json_out='', tags=[]):
         """
         Processes an image through the inference server, performs inference on it
         and displays (or saves) the processed results
 
         :param:
-            - input_: Input directory to load from in image
+            - input_: Input directory to load from in image 
                 NOTE: directory must only contain image files
-            - fo_dataset: Dataset name to export predictions to fiftyone, 
-                default '', no export
             - vis: Show visualization of prediction on computer, default false
             - output_: Output directory, default no output saved
+            - fo_dataset: fiftyone dataset of labeled images to validate/test model with
+                default None, no dataset used
+            - create_fo_ds: name of new fiftyone dataset to create, used in combination
+                with input_ (inferencing locally, want to visualize results only)
+            - json_out: Output directory for annotations outputs, includes filename
+                e.g. /my/output/file/path/myfile.json
             - tags: list of tags to organize inference results in fiftyone
+
+        ** Can either have input form local directory or from fiftyone, not both
         """
-        # input check
         print("Running in 'image' mode")
-        if not input_:
-            print("FAILED: no input image/s")
+
+        # input check
+        if input_ and fo_dataset is not None:
+            print("FAILED: can only have local input OR fiftyone input")
+            sys.exit(1)
+        # input check
+        if not input_ and fo_dataset is None:
+            print("FAILED: no input image/s or fiftyone dataset")
             sys.exit(1)
         
-        # read in images files
-        filenames = self.__read_input(input_)
+        if input_:
+            # read in images files
+            filepaths_dict = self.__read_input(input_)
+        else:
+            # read in dataset files
+            filepaths_dict = self.__read_input(fo_dataset)
 
         # print model stats 
         if self.__model_info:
@@ -186,12 +200,12 @@ class Base_Inference_Client():
         print("Done")
 
         annotations = {}
-        for i, filename in enumerate(filenames):
+        for i, filepath in enumerate(filepaths_dict):
             # existence check
             print("Creating buffer from image file...")
-            input_image = cv2.imread(str(filename.path))
+            input_image = cv2.imread(str(filepath))
             if input_image is None:
-                print(f"FAILED: could not load input image {str(filename.path)}")
+                print(f"FAILED: could not load input image {str(filepath)}")
                 continue
 
             # preprocess input image
@@ -216,11 +230,11 @@ class Base_Inference_Client():
             
             # post process raw data from server
             annotation = self._postprocess(results, input_image, [self.inf_width, self.inf_height], tags)
-            print(f"Detected objects: {len(annotation)}")
+            print(f"Done inference for {filepath}")
 
             # saves detections in annotations format described in method description
             #   for use in export_to_fo
-            annotations[filename.path] = annotation
+            annotations[filepath] = annotation
 
             # writes the image out/ displays it
             if output_:
@@ -235,33 +249,60 @@ class Base_Inference_Client():
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
 
+        # export annotations as json
+        if json_out:
+            export_json(json_out, annotations)
         # upload data to fo
-        if fo_dataset:
-            self.__export_image_to_fo(annotations, dataset=fo_dataset)
+        if input_ and create_fo_ds:
+            export_image_to_fo(
+                annotations=annotations, 
+                dataset=create_fo_ds, 
+                label_field="model_detections"
+                )
+        elif fo_dataset:
+            update_image_in_fo(
+                annotations=annotations, 
+                dataset=filepaths_dict, 
+                label_field="model_detections"
+            )
 
-    def infer_video(self, input_, vis=False, fo_dataset='', output_='', fps=24.0, tags=[]):
+    def infer_video(self, input_, vis=False, fo_dataset='', create_fo_ds='', json_out='', output_='', fps=24.0, tags=[]):
         """
         Processes a video through the inference server, performs inference on it
         and displays (or saves) the processed results
 
         :param:
-            - input_: Input directory to load from in video
+            - input_: Input directory to load from in video OR a fiftyone dataset
+                of labeled images to validate/test model with
                 NOTE: directory must only contain video files
             - vis: Show visualization of prediction on computer, default false
             - fo_dataset: Dataset name to export predictions to fiftyone, 
                 default '', no export
+            - create_fo_ds: name of new fiftyone dataset to create, used in combination
+                with input_ (inferencing locally, want to visualize results only)
+            - json_out: Output directory for annotations outputs, includes filename
+                e.g. /my/output/file/path/myfile.json            
             - output_: Output directory, default no output saved
             - fps: Video output fps, default 24.0 FPS
             - tags: list of tags to organize inference results in fiftyone
         """
-        # input check
         print("Running in 'video' mode")
-        if not input_:
-            print("FAILED: no input video")
+
+        # input check
+        if input_ and fo_dataset is not None:
+            print("FAILED: can only have local input OR fiftyone input")
+            sys.exit(1)
+        # input check
+        if not input_ and fo_dataset is None:
+            print("FAILED: no input video/s or fiftyone dataset")
             sys.exit(1)
         
-        # read in images files
-        filenames = self.__read_input(input_)
+        if input_:
+            # read in images files
+            filepaths_dict = self.__read_input(input_)
+        else:
+            # read in dataset files
+            filepaths_dict = self.__read_input(fo_dataset)
 
         # gets the model statistics from server
         if self.__model_info:
@@ -269,15 +310,15 @@ class Base_Inference_Client():
         print("Done.")
 
         annotations = {}
-        for i, filename in enumerate(filenames):
+        for i, filepath in enumerate(filepaths_dict):
             # existence check
             print("Opening input video stream...")
-            cap = cv2.VideoCapture(filename.path)
+            cap = cv2.VideoCapture(filepath)
             if not cap.isOpened():
-                print(f"FAILED: cannot open video {filename.path}")
+                print(f"FAILED: cannot open video {filepath}")
                 continue
 
-            annotations[filename.path] = {}
+            annotations[filepath] = {}
 
             n_frame = 1
             out = None   # file location to write output to
@@ -314,9 +355,10 @@ class Base_Inference_Client():
 
                 # run postprocessing
                 annotation = self._postprocess(results, frame, [self.inf_width, self.inf_height], tags)
-                print(f"Frame {n_frame}: {len(annotation)} objects")
+                print(f"Frame {n_frame}: done")
+
                 # add annotation of frame under the video 
-                annotations[filename.path][n_frame] = annotation 
+                annotations[filepath][n_frame] = annotation 
                 # increment frame
                 n_frame += 1
                 
@@ -339,8 +381,22 @@ class Base_Inference_Client():
             else:
                 cv2.destroyAllWindows()
         
-        if fo_dataset:
-            self.__export_video_to_fo(annotations, fo_dataset)
+        # export annotations as json
+        if json_out:
+            export_json(json_out, annotations)
+        # upload data to fo
+        if input_ and create_fo_ds:
+            export_video_to_fo(
+                annotations=annotations, 
+                dataset=create_fo_ds, 
+                label_field="model_detections"
+                )
+        elif fo_dataset:
+            update_video_in_fo(
+                annotations=annotations, 
+                dataset=filepaths_dict, 
+                label_field="model_detections"
+            )
 
     def infer_dummy(self):
         """       
@@ -391,154 +447,32 @@ class Base_Inference_Client():
         Reads the input files names to list, skipping directories
 
         :params:
-            - input_: directory to load from in image or video mode
+            - input_: directory to load from in image or video mode OR fiftyone
+                dataset of images or video
 
         :returns:
-            - array of scandir objects containing attributes for filename and path
+            - if input_ is a directory, a dict of filepaths -> null, else if input_ is 
+                a fiftyone dataset, a dict of filepaths -> dataset sample
         """
-        extensions = [".jpg", ".jpeg", ".png", ".bmp", ".mp4", ".mov", ".avi"]
-        
-        # NOTE currently, doesn't distinguish between video and images in folder, 
-        #   up to user to prepare proper inference directory
-        # loop through directory and append every image
-        filenames = []
-        for filename in os.scandir(str(input_)):
-            # skip directories and symlinks, only add images
-            if (filename.is_file(follow_symlinks=False) and \
-                os.path.splitext(filename.path)[1].lower() in extensions): 
-                filenames.append(filename)
+        filepaths = {}
 
-        return filenames
+        if type(input_) == str:
+            # NOTE currently, doesn't distinguish between video and images in folder, 
+            #   up to user to prepare proper inference directory
 
-    def __export_image_to_fo(self, annotations, dataset):
-        """
-        Transforms image detection data into format for fiftyone as uploads to 
-        existing dataset or as a new dataset
+            extensions = [".jpg", ".jpeg", ".png", ".bmp", ".mp4", ".mov", ".avi"]
 
-        Annotations format is 
-        {
-            "path/to/image": {
-                "detections": [
-                    {
-                        "bbox": [<top-left-x>, <top-left-y>, <width>, <height>],
-                        "label": obj_class
-                        "confidence": 0.00-1.00
-                    }
-                ],
-                "tags": [training/validation/testing]
-            }
-        }
-
-        :params:
-            - annotations: dict of images and their filepaths to model predictions
-            - dataset: name of dataset to export annotations to in fiftyone, if 
-                dataset name already exists in fiftyone, will append to dataset
-        """
-        samples = []
-
-        for filepath in annotations:
-            sample = fo.Sample(filepath=filepath)
-
-            detections = []
-            # convert all detections to fo format
-            for det in annotations[filepath]['detections']:
-                label = det['label']
-                # bbox coordingates in format [top-left-x, top-left-y, width, height]
-                bbox = det['bbox']
-                confidence = det['confidence']
-
-                detections.append(
-                    fo.Detection(label=label, bounding_box=bbox, confidence=confidence)
-                )
-
-            # set sample detections to converted samples
-            sample['model_detections'] = fo.Detections(detections=detections)
-            sample.tags = annotations[filepath]["tags"]
-            samples.append(sample)
-                           
-        # check if dataset is in list
-        if dataset in fo.list_datasets():
-            dataset = fo.load_dataset(dataset)
+            # loop through directory and append every image
+            for file_obj in os.scandir(str(input_)):
+                # skip directories and symlinks, only add images
+                if (file_obj.is_file(follow_symlinks=False) and \
+                    os.path.splitext(file_obj.path)[1].lower() in extensions): 
+                    filepaths[file_obj.path] = None
         else:
-            print("Dataset does not exist in fiftyone, creating new \
-                  dataset by default.  Make sure the dataset set to persistent \
-                  if using existing fiftyone datset")
-            dataset = fo.Dataset(dataset)
-        
-        # set dataset to persistent, stay in fo
-        dataset.persistent = True
-        # populate dataset with the processed samples
-        dataset.add_samples(samples)
+            for sample in input_:
+                filepaths[sample.filepath] = sample
 
-    def __export_video_to_fo(self, annotations, dataset):
-        """
-        Transforms video detection data into format for fiftyone as uploads to 
-        existing dataset or as a new dataset
-
-        Annotations format is 
-        {
-            "path/to/video": {
-                1: {
-                    "detections": [
-                        {
-                            "bbox": [<top-left-x>, <top-left-y>, <width>, <height>],
-                            "label": obj_class
-                            "confidence": 0.00-1.00
-                        }
-                    ],
-                    tags": [training/validation/testing]
-                }
-                2: { ... }
-            }
-        }
-
-        :params:
-            - annotations: dict of videos and their filepaths to model predictions 
-                ordered by frame
-            - dataset: name of dataset to export annotations to in fiftyone, if 
-                dataset name already exists in fiftyone, will append to dataset
-        """
-        samples = []
-
-        for filepath in annotations:
-            sample = fo.Sample(filepath=filepath)
-
-            # create video sample with frame labels
-            for n_frame, annotation in annotations[filepath].items():
-                detections = []
-                frame = fo.Frame()
-
-                for det in annotation["detections"]:
-                    label = det["label"]
-                    # bbox coordingates in format [top-left-x, top-left-y, width, height]
-                    bbox = det['bbox']
-                    confidence = det['confidence']
-
-                    detections.append(
-                        fo.Detection(label=label, bounding_box=bbox, confidence=confidence)
-                    )
-                # append detections in frame to the frame
-                frame["objects"] = fo.Detections(detections=detections)
-                # add frame to sample
-                sample.frames[n_frame] = frame
-            # add tag to the video
-            sample.tags = annotation["tags"]
-            samples.append(sample)
-        
-        # check if dataset is in list
-        if dataset in fo.list_datasets():
-            dataset = fo.load_dataset(dataset)
-        else:
-            print("Dataset does not exist in fiftyone, creating new \
-                  dataset by default.  Make sure the dataset set to persistent \
-                  if using existing fiftyone datset")
-            dataset = fo.Dataset(dataset)
-        
-        # set dataset to persistent, stay in fo
-        dataset.persistent = True
-        # populate dataset with the processed samples
-        dataset.add_samples(samples)
-
+        return filepaths
 
     @abstractmethod
     def _preprocess(self, input_image, inf_shape):
@@ -556,7 +490,7 @@ class Base_Inference_Client():
         """
 
     @abstractmethod
-    def _postprocess(self, results, input_image, inf_shape, tags, scale=None):
+    def _postprocess(self, results, input_image, inf_shape, tags, classes=None, scale=None):
         """
         Postprocessing function, implemented in child class, performs necessary 
         modifications to output data to be uploaded to fiftyone
@@ -567,25 +501,29 @@ class Base_Inference_Client():
             - inf_shape: [inf_weight, inf_height], image dimensions specified for 
                 inference
             - tags: list of tags to organize inference results in fiftyone
+            - classes: list of strings of class names which model was trained on
             - scales: image resize scale, default: no scale postprocessing applied
 
         :returns:
             - processed results ready to be uploaded to fiftyone
         """
     
-    @abstractmethod
-    def _visualize(self, results, input_image, inf_shape):
-        """
-        Processes results and composes the processed results onto the input image to create visual 
-        representation of the detections
+    # @abstractmethod
+    # def _visualize(self, results, input_image, inf_shape):
+    #     """
+    #     Processes results and composes the processed results onto the input image to create visual 
+    #     representation of the detections
 
-        :params:
-            - results: raw inference data from the inference server 
-            - input_image: original image input 
-            - inf_shape: [inf_weight, inf_height], image dimensions specified for 
-                inference
+    #    **NOTE: this method is for development/testing purposes only and should not be 
+    #     uncommented when using the baseline
 
-        :returns:
-            - the input image with the detecitons visualized 
-        """
+    #     :params:
+    #         - results: raw inference data from the inference server 
+    #         - input_image: original image input 
+    #         - inf_shape: [inf_weight, inf_height], image dimensions specified for 
+    #             inference
+
+    #     :returns:
+    #         - the input image with the detecitons mapped onto the image 
+    #     """
     

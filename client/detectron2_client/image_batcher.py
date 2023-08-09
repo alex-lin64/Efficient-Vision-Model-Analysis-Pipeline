@@ -15,6 +15,9 @@
 # limitations under the License.
 #
 
+# NOTE: THIS FILE IS FOR DEVELOPMENT PURPOSES ONLY
+
+
 import os
 import sys
 import numpy as np

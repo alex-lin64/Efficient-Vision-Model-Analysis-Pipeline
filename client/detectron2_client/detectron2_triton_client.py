@@ -238,99 +238,102 @@ class Detectron2_Triton_Client(Base_Inference_Client):
         print(detected_objects)
         return detected_objects
 
-    def _visualize(self, detected_objects, input_image):
-        """
-        Composes the processed results onto the input image to create visual 
-        representation of the detections
 
-        :params:
-            - detected_objects: processed inference results
-            - input_image: original image input 
+    # def _visualize(self, detected_objects, input_image):
+    #     """
+    #     Composes the processed results onto the input image to create visual 
+    #     representation of the detections
+    
+    #     NOTE: for development purposes only
 
-        :returns:
-            - the input image with the detecitons visualized 
-        """
-        input_image_rgb = cv2.cvtColor(input_image, cv2.COLOR_BGR2RGB)
-        image = Image.fromarray(input_image_rgb)
-        # Get image dimensions.
-        im_width, im_height = image.size
-        line_width = 2
-        font = ImageFont.load_default()
-        for d in detected_objects:
-            color = COLORS[d['class'] % len(COLORS)]
-            # Dynamically convert PIL color into RGB numpy array.
-            pixel_color = Image.new("RGB",(1, 1), color)
-            # Normalize.
-            np_color = (np.asarray(pixel_color)[0][0])/255
-            # TRT instance segmentation masks.
-            if isinstance(d['mask'], np.ndarray) and d['mask'].shape == (28, 28):
-                # PyTorch uses [x1,y1,x2,y2] format instead of regular [y1,x1,y2,x2].
-                d['ymin'], d['xmin'], d['ymax'], d['xmax'] = d['xmin'], d['ymin'], d['xmax'], d['ymax']
-                # Get detection bbox resolution.
-                det_width = round(d['xmax'] - d['xmin'])
-                det_height = round(d['ymax'] - d['ymin'])
-                # Slight scaling, to get binary masks after float32 -> uint8
-                # conversion, if not scaled all pixels are zero.
-                mask = d['mask'] > self.iou_threshold
-                # Convert float32 -> uint8.
-                mask = mask.astype(np.uint8)
-                # Create an image out of predicted mask array.
-                small_mask = Image.fromarray(mask)
-                # Upsample mask to detection bbox's size.
-                mask = small_mask.resize((det_width, det_height), resample=Image.BILINEAR)
-                # Create an original image sized template for correct mask placement.
-                pad = Image.new("L", (im_width, im_height))
-                # Place your mask according to detection bbox placement.
-                pad.paste(mask, (round(d['xmin']), (round(d['ymin']))))
-                # Reconvert mask into numpy array for evaluation.
-                padded_mask = np.array(pad)
-                #Creat np.array from original image, copy in order to modify.
-                image_copy = np.asarray(image).copy()
-                # Image with overlaid mask.
-                masked_image = self.__overlay(image_copy, padded_mask, np_color)
-                # Reconvert back to PIL.
-                image = Image.fromarray(masked_image)
+    #     :params:
+    #         - detected_objects: processed inference results
+    #         - input_image: original image input 
 
-            # Bbox lines.
-            draw = ImageDraw.Draw(image)
-            draw.line([(d['xmin'], d['ymin']), (d['xmin'], d['ymax']), (d['xmax'], d['ymax']), (d['xmax'], d['ymin']),
-                    (d['xmin'], d['ymin'])], width=line_width, fill=color)
-            label = "Class {}".format(d['class'])
-            if d['class'] < len(LABELS):
-                label = "{}".format(LABELS[d['class']])
-            score = d['score']
-            text = "{}: {}%".format(label, int(100 * score))
-            if score < 0:
-                text = label
-            text_width, text_height = font.getsize(text)
-            text_bottom = max(text_height, d['ymin'])
-            text_left = d['xmin']
-            margin = np.ceil(0.05 * text_height)
-            draw.rectangle([(text_left, text_bottom - text_height - 2 * margin), (text_left + text_width, text_bottom)],
-                        fill=color)
-            draw.text((text_left + margin, text_bottom - text_height - margin), text, fill='black', font=font)
+    #     :returns:
+    #         - the input image with the detecitons visualized 
+    #     """
+    #     input_image_rgb = cv2.cvtColor(input_image, cv2.COLOR_BGR2RGB)
+    #     image = Image.fromarray(input_image_rgb)
+    #     # Get image dimensions.
+    #     im_width, im_height = image.size
+    #     line_width = 2
+    #     font = ImageFont.load_default()
+    #     for d in detected_objects:
+    #         color = COLORS[d['class'] % len(COLORS)]
+    #         # Dynamically convert PIL color into RGB numpy array.
+    #         pixel_color = Image.new("RGB",(1, 1), color)
+    #         # Normalize.
+    #         np_color = (np.asarray(pixel_color)[0][0])/255
+    #         # TRT instance segmentation masks.
+    #         if isinstance(d['mask'], np.ndarray) and d['mask'].shape == (28, 28):
+    #             # PyTorch uses [x1,y1,x2,y2] format instead of regular [y1,x1,y2,x2].
+    #             d['ymin'], d['xmin'], d['ymax'], d['xmax'] = d['xmin'], d['ymin'], d['xmax'], d['ymax']
+    #             # Get detection bbox resolution.
+    #             det_width = round(d['xmax'] - d['xmin'])
+    #             det_height = round(d['ymax'] - d['ymin'])
+    #             # Slight scaling, to get binary masks after float32 -> uint8
+    #             # conversion, if not scaled all pixels are zero.
+    #             mask = d['mask'] > self.iou_threshold
+    #             # Convert float32 -> uint8.
+    #             mask = mask.astype(np.uint8)
+    #             # Create an image out of predicted mask array.
+    #             small_mask = Image.fromarray(mask)
+    #             # Upsample mask to detection bbox's size.
+    #             mask = small_mask.resize((det_width, det_height), resample=Image.BILINEAR)
+    #             # Create an original image sized template for correct mask placement.
+    #             pad = Image.new("L", (im_width, im_height))
+    #             # Place your mask according to detection bbox placement.
+    #             pad.paste(mask, (round(d['xmin']), (round(d['ymin']))))
+    #             # Reconvert mask into numpy array for evaluation.
+    #             padded_mask = np.array(pad)
+    #             #Creat np.array from original image, copy in order to modify.
+    #             image_copy = np.asarray(image).copy()
+    #             # Image with overlaid mask.
+    #             masked_image = self.__overlay(image_copy, padded_mask, np_color)
+    #             # Reconvert back to PIL.
+    #             image = Image.fromarray(masked_image)
 
-            return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    #         # Bbox lines.
+    #         draw = ImageDraw.Draw(image)
+    #         draw.line([(d['xmin'], d['ymin']), (d['xmin'], d['ymax']), (d['xmax'], d['ymax']), (d['xmax'], d['ymin']),
+    #                 (d['xmin'], d['ymin'])], width=line_width, fill=color)
+    #         label = "Class {}".format(d['class'])
+    #         if d['class'] < len(LABELS):
+    #             label = "{}".format(LABELS[d['class']])
+    #         score = d['score']
+    #         text = "{}: {}%".format(label, int(100 * score))
+    #         if score < 0:
+    #             text = label
+    #         text_width, text_height = font.getsize(text)
+    #         text_bottom = max(text_height, d['ymin'])
+    #         text_left = d['xmin']
+    #         margin = np.ceil(0.05 * text_height)
+    #         draw.rectangle([(text_left, text_bottom - text_height - 2 * margin), (text_left + text_width, text_bottom)],
+    #                     fill=color)
+    #         draw.text((text_left + margin, text_bottom - text_height - margin), text, fill='black', font=font)
 
-    def __overlay(self, image, mask, color, alpha_transparency=0.5):
-        """
-        Overlay mask with transparency on top of the image.
+    #         return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+    # def __overlay(self, image, mask, color, alpha_transparency=0.5):
+    #     """
+    #     Overlay mask with transparency on top of the image.
         
-        :params:
-            - image: a copy of original image in RGB pil format
-            - mask: the mask (segmentation) to overlay on the image
-            - color: the color of the visualized mask
-            - alpha_transparency: transparency of the mask, default 0.5
+    #     :params:
+    #         - image: a copy of original image in RGB pil format
+    #         - mask: the mask (segmentation) to overlay on the image
+    #         - color: the color of the visualized mask
+    #         - alpha_transparency: transparency of the mask, default 0.5
         
-        :returns:
-            - the image with the mask overlayed
-        """
-        for channel in range(3):
-            image[:, :, channel] = np.where(
-                mask == 1,
-                image[:, :, channel] *
-                (1 - alpha_transparency) + alpha_transparency * color[channel] * 255,
-                image[:, :, channel]
-                )
-        return image
+    #     :returns:
+    #         - the image with the mask overlayed
+    #     """
+    #     for channel in range(3):
+    #         image[:, :, channel] = np.where(
+    #             mask == 1,
+    #             image[:, :, channel] *
+    #             (1 - alpha_transparency) + alpha_transparency * color[channel] * 255,
+    #             image[:, :, channel]
+    #             )
+    #     return image
 
