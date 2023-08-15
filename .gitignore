@@ -56,6 +56,9 @@ coverage.xml
 *.png
 *.gif
 
+# exception for readme images
+!baseline_sys_diagram.png
+
 # Sphinx documentation
 docs/_build/
 
