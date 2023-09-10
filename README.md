@@ -1,6 +1,4 @@
-﻿## Welcome to the ARCLIGHT Baseline system!  
-
-The ARCLIGHT Baseline system is a baseline system composed of currently SOTA object detection and acitivty recognition models used as a metric of comparison for the ARCLIGHT system itself.  This is a work in progress.  Different components will be subject to change.  More information about the current baseline can be found in /readme_resources/baseline_sys.pptx.  
+This pipeline is composed of current SOTA object detection and activity recognition models.  This project is completed under the guidance of Boston Fusion Corp and aids in their completion of a proposal funded by Darpa's BAA [Ecole](https://www.darpa.mil/program/environment-driven-conceptual-learning).  The pipeline aims to coalesce the difficulty of analyzing different off-the-shelf models by providing a single framework to quickly switch models and datasets in order to get to the important task: gathering data.
 
 Tool Stack:
 - Triton Inference Server
@@ -22,7 +20,7 @@ Below is a current system diagram of the baseline.
 ![Baseline System Diagram](/readme_resources/baseline_sys_diagram.png)
 
 
-Below you will find installation instrucitons and an overview of the typical workflow through the baseline pipeline.  A FAQ section at the bottom tracks common errors and bugs that may arise during the setup phase.
+Below you will find installation instructions and an overview of the typical workflow through the baseline pipeline.  A FAQ section at the bottom tracks common errors and bugs that may arise during the setup phase.
 
 
 ## Installation:
@@ -34,7 +32,7 @@ Below you will find installation instrucitons and an overview of the typical wor
 # clone the repository locally
 git clone git@git.bostonfusion.com:bfc/operations/multi-domain-systems/arclight/baseline_object_detection.git
 
-# go to project folder
+# go to the project folder
 cd /baseline_object_detection
 
 # install required packages in conda environment w/ python=3.8
@@ -119,7 +117,7 @@ output [
 ]
 ```
 
-A client class must be implemented for the new model.  To simplify the manual work of connecting to the Triton Inference Server, base_triton_client.py is provided as a super class to take care the housekeeping involved with establishing server connection, inferencing,and exports.  The user is only responsible for implementing model specific initialization values and two functions (listed below).  The new client should be organized into a new folder along with any supporting files.
+A client class must be implemented for the new model.  To simplify the manual work of connecting to the Triton Inference Server, base_triton_client.py is provided as a superclass to take care of the housekeeping involved with establishing server connection, inferencing, and exports.  The user is only responsible for implementing model-specific initialization values and two functions (listed below).  The new client should be organized into a new folder along with any supporting files.
 
 ```python
 
