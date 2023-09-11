@@ -1,3 +1,5 @@
+# Efficient Vision Model Analysis Pipeline (EVMAP)
+
 This pipeline is composed of current SOTA object detection and activity recognition models.  This project is completed under the guidance of Boston Fusion Corp and aids in their completion of a proposal funded by Darpa's BAA [Ecole](https://www.darpa.mil/program/environment-driven-conceptual-learning).  The pipeline aims to coalesce the difficulty of analyzing different off-the-shelf models by providing a single framework to quickly switch models and datasets in order to get to the important task: gathering data.
 
 Tool Stack:
